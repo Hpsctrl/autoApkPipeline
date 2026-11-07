@@ -82,7 +82,7 @@ def audit_screenshot_with_gemini(image_path: str, api_key: str) -> dict:
         }
     }
 
-    models = ["gemini-2.5-flash", "gemini-1.5-flash"]
+    models = ["gemini-3.5-flash", "gemini-3.5-flash-lite", "gemini-2.5-flash"]
     for model_name in models:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
         data = json.dumps(payload).encode("utf-8")

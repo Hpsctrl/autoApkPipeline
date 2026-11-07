@@ -119,7 +119,7 @@ Expected JSON schema:
         }
     }
     
-    models = ["gemini-2.5-flash", "gemini-1.5-flash", "gemini-2.5-pro"]
+    models = ["gemini-3.5-flash", "gemini-3.5-flash-lite", "gemini-2.5-flash"]
     for model_name in models:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
         data = json.dumps(payload).encode("utf-8")
