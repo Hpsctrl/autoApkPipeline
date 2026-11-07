@@ -34,11 +34,19 @@ jobs:
           sudo udevadm control --reload-rules || true
           sudo udevadm trigger --name-match=kvm || true
 
-      - name: Download Remote APK (if URL provided)
-        if: ${{ inputs.apk_url != '' }}
+      - name: Prepare Target Input APK
         run: |
           mkdir -p input
-          curl -L "${{ inputs.apk_url }}" -o input/target.apk
+          APK_URL="${{ inputs.apk_url }}"
+          if [ -n "$APK_URL" ]; then
+            echo "[+] Downloading custom target APK from: $APK_URL"
+            curl -L "$APK_URL" -o input/target.apk
+          else
+            echo "[+] No custom URL provided. Downloading reference APK from GitHub release..."
+            curl -L "https://github.com/Hpsctrl/autoApkPipeline/releases/download/v1.0.0/breeno_reference.apk" -o input/target.apk
+          fi
+          echo "[+] Verified input APK:"
+          ls -lh input/target.apk
 
       - name: Install Toolchain (Java, Apktool, d8, apksigner)
         run: bash scripts/bootstrap.sh

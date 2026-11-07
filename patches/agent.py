@@ -23,26 +23,23 @@ PLAN_FILE = "patch_plan.json"
 def decompile_apk():
     os.makedirs("input", exist_ok=True)
     target = None
-    if os.path.exists(INPUT_APK):
+    if os.path.exists(INPUT_APK) and os.path.getsize(INPUT_APK) > 1000000:
         target = INPUT_APK
     else:
-        cands = [os.path.join("input", f) for f in os.listdir("input") if f.endswith(".apk")]
+        cands = [os.path.join("input", f) for f in os.listdir("input") if f.endswith(".apk") and os.path.getsize(os.path.join("input", f)) > 1000000]
         if cands:
             target = cands[0]
         else:
-            print("[+] No input APK found. Downloading default Breeno Keyboard reference...")
+            print("[+] Downloading default Breeno Keyboard reference APK via curl...")
             target = INPUT_APK
             ref_url = "https://github.com/Hpsctrl/autoApkPipeline/releases/download/v1.0.0/breeno_reference.apk"
-            try:
-                urllib.request.urlretrieve(ref_url, target)
-            except Exception as e:
-                print(f"[!] Warning downloading reference: {e}")
+            subprocess.run(["curl", "-L", "-s", ref_url, "-o", target], check=False)
 
-    if not os.path.exists(target):
-        print(f"[!] Input APK '{target}' not found!")
+    if not os.path.exists(target) or os.path.getsize(target) < 1000000:
+        print(f"[!] Error: Target APK '{target}' is missing or corrupted (< 1MB)!")
         sys.exit(1)
 
-    print(f"[+] Decompiling {target} into {WORKSPACE}...")
+    print(f"[+] Decompiling {target} ({os.path.getsize(target) / 1024 / 1024:.1f} MB) into {WORKSPACE}...")
     subprocess.run(["apktool", "d", target, "-o", WORKSPACE, "-f"], check=True)
     print(f"✅ Decompiled into {WORKSPACE}")
 
