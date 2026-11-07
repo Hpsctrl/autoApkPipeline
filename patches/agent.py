@@ -219,12 +219,36 @@ def main():
             with open(manifest_path, "r", encoding="utf-8", errors="ignore") as f:
                 m_content = f.read()
             if "<manifest" in m_content:
-                # Text manifest
                 suffix = plan.get("package_clone", {}).get("suffix", ".en")
-                m_content = re.sub(r'package="([^"]+)"', rf'package="\1{suffix}"', m_content)
-                with open(manifest_path, "w", encoding="utf-8") as f:
-                    f.write(m_content)
-                print(f"✅ Appended {suffix} to package attribute in AndroidManifest.xml")
+                pkg_match = re.search(r'package="([^"]+)"', m_content)
+                if pkg_match:
+                    orig_pkg = pkg_match.group(1)
+                    new_pkg = orig_pkg + suffix if not orig_pkg.endswith(suffix) else orig_pkg
+
+                    # 1. Expand relative component names to absolute to prevent ClassNotFoundException
+                    # e.g. android:name=".MainActivity" -> android:name="com.foo.MainActivity"
+                    m_content = re.sub(r'android:name="\.([^"]+)"', rf'android:name="{orig_pkg}.\1"', m_content)
+
+                    # 2. Update package attribute
+                    m_content = re.sub(r'package="([^"]+)"', rf'package="{new_pkg}"', m_content)
+
+                    # 3. Re-scope ContentProvider authorities to prevent collisions with pre-installed OEM apps
+                    m_content = re.sub(
+                        rf'android:authorities="({re.escape(orig_pkg)}[^"]*)"',
+                        lambda m: f'android:authorities="{m.group(1).replace(orig_pkg, new_pkg, 1)}"',
+                        m_content
+                    )
+
+                    # 4. Re-scope custom permissions
+                    m_content = re.sub(
+                        rf'android:name="({re.escape(orig_pkg)}[^"]*\.permission[^"]*)"',
+                        lambda m: f'android:name="{m.group(1).replace(orig_pkg, new_pkg, 1)}"',
+                        m_content
+                    )
+
+                    with open(manifest_path, "w", encoding="utf-8") as f:
+                        f.write(m_content)
+                    print(f"✅ Cloned package {orig_pkg} -> {new_pkg} with absolute component resolution & collision-free authorities")
         except Exception as e:
             print(f"[!] Warning updating manifest: {e}")
 
