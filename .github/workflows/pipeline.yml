@@ -1,0 +1,106 @@
+name: AutoAPK Pipeline
+
+on:
+  workflow_dispatch:
+    inputs:
+      instruction:
+        description: 'What should the AI do with this APK? (plain English)'
+        required: true
+        default: 'Localize all Chinese strings to English, replace ENG button with dot, fix voice timeout, and enable live Giphy search'
+      apk_url:
+        description: 'Direct download URL for input APK (optional; leaves blank to use input/target.apk)'
+        required: false
+
+  issues:
+    types: [opened, labeled]
+
+permissions:
+  contents: write
+  issues: write
+  actions: write
+
+jobs:
+  autoapk-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Enable KVM Virtualization
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules || true
+          sudo udevadm trigger --name-match=kvm || true
+
+      - name: Download Remote APK (if URL provided)
+        if: ${{ inputs.apk_url != '' }}
+        run: |
+          mkdir -p input
+          curl -L "${{ inputs.apk_url }}" -o input/target.apk
+
+      - name: Install Toolchain (Java, Apktool, d8, apksigner)
+        run: bash scripts/bootstrap.sh
+
+      - name: Install Python Dependencies
+        run: pip install -r requirements.txt -q
+
+      - name: Run AI Agent (Discovery, Planning & Patching)
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GIPHY_API_KEY: ${{ secrets.GIPHY_API_KEY }}
+          USER_INSTRUCTION: ${{ inputs.instruction || github.event.issue.body || 'Localize to English and fix bugs' }}
+        run: python3 patches/agent.py
+
+      - name: Rebuild, Align and Sign APK
+        run: bash scripts/rebuild.sh
+
+      - name: Run Visual QA Audit
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          python3 ai_qa/run_visual_qa.py
+          python3 ai_qa/qa_report.py
+
+      - name: Upload Finished APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AutoAPK_Finished_Build
+          path: output/*.apk
+          retention-days: 30
+
+      - name: Upload Visual QA Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: Visual_QA_Report
+          path: ai_qa/qa_report.html
+          retention-days: 30
+
+      - name: Publish GitHub Release
+        id: create_release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: "build-${{ github.run_number }}"
+          name: "AutoAPK Release #${{ github.run_number }}"
+          body: |
+            ## 🚀 AutoAPK Pipeline Build Completed
+            - **Instruction:** `${{ inputs.instruction || github.event.issue.body || 'Localize to English' }}`
+            - **Status:** Verified 4-byte zip aligned, 16KB native .so, release signed (v1/v2/v3).
+            - **AI Engine:** Gemini 2.5 Flash / 1.5 Flash
+          files: |
+            output/*.apk
+            ai_qa/qa_report.html
+
+      - name: Post Comment on Issue (if triggered via Issue)
+        if: github.event_name == 'issues'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const releaseUrl = "${{ steps.create_release.outputs.url }}";
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `### ✅ AutoAPK Build #${context.runNumber} Ready!\n\nYour patched APK has been successfully built, aligned, signed, and verified.\n\n🔗 **[Download Patched APK in Release](${releaseUrl})**`
+            });

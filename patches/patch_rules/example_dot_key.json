@@ -1,0 +1,7 @@
+{
+  "id": "dot_key_replacement",
+  "description": "Replace ENG language toggle key with a Dot (.) period key",
+  "file": "smali/com/oplus/keyboard/input/view/body/r.smali",
+  "find": "const-string/jumbo v6, \"EN\"",
+  "replace": "const-string/jumbo v6, \".\""
+}

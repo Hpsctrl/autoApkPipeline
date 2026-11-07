@@ -1,0 +1,21 @@
+{
+  "pipeline_name": "AutoAPK Pipeline",
+  "version": "1.0.0",
+  "package_id": "com.oplus.keyboard.en",
+  "original_package_id": "com.oplus.keyboard",
+  "app_label": "Breeno Keyboard",
+  "default_instruction": "Localize all Chinese strings to English, replace the Chinese ENG toggle with a dot key that types '.', fix voice timeout from 3s to 120s, and enable live Giphy stickers & GIFs search.",
+  "keystore": {
+    "alias": "autokey",
+    "password": "android",
+    "validity_days": 10000
+  },
+  "gemini": {
+    "model": "gemini-2.5-flash",
+    "api_base": "https://generativelanguage.googleapis.com/v1beta/models"
+  },
+  "apis": {
+    "speech_default_lang": "en-US",
+    "voice_timeout_seconds": 120
+  }
+}
