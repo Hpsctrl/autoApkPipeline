@@ -1,0 +1,48 @@
+{
+  "name": "Super Clipboard Fixes (5000 items, screenshot capture, non-null text jump)",
+  "smali_patches": [
+    {
+      "file": "smali/com/oplus/keyboard/clipboard/ClipboardManager$onPrimaryClipChanged$1$1.smali",
+      "find": "if-nez v0, :cond_0",
+      "replace": "if-eqz v0, :cond_0",
+      "regex": false,
+      "description": "Fix inverted conditional branch so valid text copy is accepted immediately"
+    },
+    {
+      "file": "smali/com/oplus/keyboard/clipboard/function/e.smali",
+      "find": "invoke-interface {v2}, Ljava/lang/CharSequence;->length()I",
+      "replace": "if-eqz v2, :cond_null_safe\n    invoke-interface {v2}, Ljava/lang/CharSequence;->length()I\n    :cond_null_safe",
+      "regex": false,
+      "description": "Safe null guard to prevent NPE when copying image without text"
+    },
+    {
+      "file": "smali/com/oplus/keyboard/clipboard/function/e.smali",
+      "find": "sget-boolean v0, L;->n:Z",
+      "replace": "const/4 v0, 0x0",
+      "regex": false,
+      "description": "Bypass L.n privacy dialog check causing background clipboard drop"
+    },
+    {
+      "file": "smali/com/oplus/keyboard/clipboard/t.smali",
+      "find": "if-le v0, v1, :cond_0",
+      "replace": "goto :cond_0",
+      "regex": false,
+      "description": "Bypass 500-item SQLite eviction query for 5,000+ item retention"
+    },
+    {
+      "file": "smali/com/oplus/keyboard/clipboard/view/ClipBoardView$showPhraseOrClip$1$1$1$3$1$1$1.smali",
+      "find": "const/16 v0, 0x1f4",
+      "replace": "const/16 v0, 0x1388",
+      "regex": false,
+      "description": "Expand visual clipboard limit counter from 500 to 5000"
+    },
+    {
+      "file": "smali/com/oplus/keyboard/clipboard/getClipCount$1.smali",
+      "find": "const/16 v0, 0x19",
+      "replace": "const/16 v0, 0xc8",
+      "regex": false,
+      "description": "Increase chunk load limit from 25 to 200 items"
+    }
+  ]
+}
+

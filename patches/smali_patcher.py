@@ -63,14 +63,40 @@ def apply_patch(workspace: str, patch: dict) -> bool:
     return True
 
 def run(workspace: str = "smali_workspace", plan_path: str = "patch_plan.json"):
-    if not os.path.exists(plan_path):
-        print(f"[!] Patch plan '{plan_path}' not found, skipping smali_patcher.")
+    patches = []
+
+    if os.path.exists(plan_path):
+        try:
+            with open(plan_path, "r", encoding="utf-8") as f:
+                plan = json.load(f)
+            patches.extend(plan.get("smali_patches", []))
+        except Exception as e:
+            print(f"[!] Error loading {plan_path}: {e}")
+    else:
+        print(f"[!] Patch plan '{plan_path}' not found.")
+
+    # Also automatically discover and load modular rules from patch_rules/
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    rules_dir = os.path.join(script_dir, "patch_rules")
+    if os.path.exists(rules_dir):
+        for rf in os.listdir(rules_dir):
+            if rf.endswith(".json"):
+                rf_path = os.path.join(rules_dir, rf)
+                try:
+                    with open(rf_path, "r", encoding="utf-8") as f:
+                        rdata = json.load(f)
+                    if isinstance(rdata, dict):
+                        if "smali_patches" in rdata and isinstance(rdata["smali_patches"], list):
+                            patches.extend(rdata["smali_patches"])
+                        elif "file" in rdata and "find" in rdata:
+                            patches.append(rdata)
+                except Exception as e:
+                    print(f"[!] Error loading rule {rf}: {e}")
+
+    if not patches:
+        print("[!] No smali patches to apply.")
         return
 
-    with open(plan_path, "r", encoding="utf-8") as f:
-        plan = json.load(f)
-
-    patches = plan.get("smali_patches", [])
     print(f"[+] Applying {len(patches)} smali bytecode patches...")
 
     success = 0

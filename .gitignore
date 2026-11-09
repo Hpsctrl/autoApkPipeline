@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+*$py.class
+*.apk
+smali_workspace/
+patch_plan.json
+keystore/
+input/*.apk
+!input/.gitkeep
+output/*.apk
+!output/.gitkeep
+

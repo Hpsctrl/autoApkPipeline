@@ -159,11 +159,36 @@ def get_default_plan() -> dict:
                 "find": "const-string/jumbo v6, \"EN\"",
                 "replace": "const-string/jumbo v6, \".\"",
                 "description": "Replace EN key with dot period key"
+            },
+            {
+                "file": "smali/com/oplus/keyboard/clipboard/ClipboardManager$onPrimaryClipChanged$1$1.smali",
+                "find": "if-nez v0, :cond_0",
+                "replace": "if-eqz v0, :cond_0",
+                "description": "Fix inverted conditional jump so copied text is never dropped"
+            },
+            {
+                "file": "smali/com/oplus/keyboard/clipboard/t.smali",
+                "find": "if-le v0, v1, :cond_0",
+                "replace": "goto :cond_0",
+                "description": "Bypass 500-item SQLite eviction query for 5,000+ clipboard items"
+            },
+            {
+                "file": "smali/com/oplus/keyboard/clipboard/view/ClipBoardView$showPhraseOrClip$1$1$1$3$1$1$1.smali",
+                "find": "const/16 v0, 0x1f4",
+                "replace": "const/16 v0, 0x1388",
+                "description": "Expand visual counter from 500 to 5000"
+            },
+            {
+                "file": "smali/com/oplus/keyboard/clipboard/getClipCount$1.smali",
+                "find": "const/16 v0, 0x19",
+                "replace": "const/16 v0, 0xc8",
+                "description": "Increase batch fetch limit from 25 to 200 items"
             }
         ],
         "injections": {
             "giphy_search": True,
-            "voice_timeout_seconds": 120
+            "voice_timeout_seconds": 120,
+            "super_clipboard": True
         }
     }
 
@@ -203,6 +228,12 @@ def main():
 
     # 4. Execute Smali patches
     subprocess.run([sys.executable, "patches/smali_patcher.py", WORKSPACE, PLAN_FILE], check=False)
+
+    # 4b. Execute Full Super Clipboard Patcher across multidex folders
+    clipboard_script = os.path.join(os.path.dirname(__file__), "fix_clipboard_full.py")
+    if os.path.exists(clipboard_script):
+        print("[+] Running Super Clipboard Patcher (5000 items, screenshot capture, non-null jump)...")
+        subprocess.run([sys.executable, clipboard_script, WORKSPACE], check=False)
 
     # 5. Localize ARSC strings
     arsc_path = os.path.join(WORKSPACE, "resources.arsc")
